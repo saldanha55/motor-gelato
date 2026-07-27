@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Motor Gelato — Módulo de Frente de Loja (PDV). Alertas de reposição e controle de vitrine.">
+    <title>Motor Gelato — Frente de Loja (PDV)</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        .btn-alerta {
+            user-select: none;
+        }
+
+        body {
+            background-color: #f1f5f9;
+            color: #334155;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        /* NAVBAR GLOBAL */
+        nav {
+            background: #0f172a;
+            padding: 0 20px;
+            min-height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            color: white;
+            flex-wrap: wrap;
+        }
+
+        .nav-brand {
+            font-weight: 900;
+            font-size: 18px;
+            color: #f59e0b;
+            letter-spacing: 1px;
+        }
+
+        .nav-links {
+            display: flex;
+            gap: 10px;
+            overflow-x: auto;
+            scrollbar-width: none;
+            align-items: center;
+        }
+
+        .nav-links::-webkit-scrollbar {
+            display: none;
+        }
+
+        .nav-link-btn {
+            background: #1e293b;
+            color: white;
+            border: 1px solid #334155;
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 13px;
+            font-weight: bold;
+            cursor: pointer;
+            text-decoration: none;
+            transition: 0.2s;
+            white-space: nowrap;
+        }
+
+        .nav-link-btn:hover {
+            background: #334155;
+        }
+
+        .nav-active {
+            background: #3b82f6 !important;
+            border-color: #3b82f6 !important;
+        }
+
+        header {
+            background: #ffffff;
+            padding: 15px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            z-index: 10;
+            margin-bottom: 20px;
+        }
+
+        .logo-area h1 {
+            color: #0f172a;
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+        }
+
+        .logo-area p {
+            color: #64748b;
+            font-size: 13px;
+            font-weight: 500;
+            margin-top: 2px;
+        }
+
+        main {
+            padding: 0 30px 30px 30px;
+            overflow-y: auto;
+            flex-grow: 1;
+        }
+
+        .card-sobremesa {
+            background: #ffffff;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            padding: 20px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            border-left: 6px solid #3b82f6;
+        }
+
+        .card-sobremesa h3 {
+            margin-bottom: 5px;
+            color: #0f172a;
+            font-size: 16px;
+        }
+
+        .card-sobremesa p {
+            font-size: 12px;
+            color: #64748b;
+            margin-bottom: 15px;
+        }
+
+        .flex-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+
+        details {
+            background: #ffffff;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        summary {
+            padding: 15px 20px;
+            cursor: pointer;
+            font-weight: 700;
+            color: #475569;
+            font-size: 14px;
+            list-style: none;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: #f8fafc;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        summary::-webkit-details-marker {
+            display: none;
+        }
+
+        summary:hover {
+            background: #f1f5f9;
+        }
+
+        .config-content {
+            padding: 20px;
+        }
+
+        .section-title {
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+
+        .title-fixos {
+            color: #0284c7;
+        }
+
+        .title-rotativos {
+            color: #ea580c;
+            margin-top: 20px;
+        }
+
+        .input-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 12px;
+        }
+
+        input {
+            padding: 12px;
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            font-size: 14px;
+            width: 100%;
+            outline: none;
+            transition: 0.2s;
+            background: #f8fafc;
+            text-transform: uppercase;
+        }
+
+        input:focus {
+            border-color: #3b82f6;
+            background: #ffffff;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+            font-size: 14px;
+        }
+
+        .btn-save {
+            background: #0f172a;
+            color: white;
+            margin-top: 20px;
+            width: 100%;
+        }
+
+        .btn-save:hover {
+            background: #1e293b;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            color: white;
+            white-space: nowrap;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+            gap: 15px;
+        }
+
+        .btn-alerta {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px 10px;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            color: #334155;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            text-transform: uppercase;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            height: 100px;
+            text-align: center;
+        }
+
+        .btn-alerta:hover {
+            border-color: #cbd5e1;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+
+        .status-aguardando {
+            background: #fffbeb !important;
+            border-color: #fcd34d !important;
+            color: #b45309 !important;
+            animation: pulsarAguardando 2s infinite ease-in-out;
+        }
+
+        @keyframes pulsarAguardando {
+            0% {
+                box-shadow: 0 0 0 0 rgba(251, 191, 36, 0.4);
+            }
+
+            70% {
+                box-shadow: 0 0 0 10px rgba(251, 191, 36, 0);
+            }
+
+            100% {
+                box-shadow: 0 0 0 0 rgba(251, 191, 36, 0);
+            }
+        }
+
+        #container-toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            z-index: 1000;
+            width: 320px;
+            max-width: 90vw;
+        }
+
+        .toast {
+            background: #ffffff;
+            color: #0f172a;
+            padding: 16px;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 14px;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            border-left: 6px solid #10b981;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+            animation: slideIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        }
+
+        .toast-content {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-grow: 1;
+        }
+
+        .icone-check {
+            background: #d1fae5;
+            color: #059669;
+            min-width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .btn-fechar-toast {
+            background: #f1f5f9;
+            border: none;
+            color: #64748b;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: pointer;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        @keyframes slideIn {
+            from {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes fadeOut {
+            from {
+                transform: scale(1);
+                opacity: 1;
+            }
+
+            to {
+                transform: scale(0.9);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            nav {
+                flex-direction: column;
+                padding: 10px;
+                gap: 10px;
+                align-items: stretch;
+            }
+
+            .nav-links {
+                width: 100%;
+                justify-content: flex-start;
+            }
+
+            header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 10px;
+                padding: 15px;
+            }
+
+            main {
+                padding: 0 15px 15px 15px;
+            }
+
+            #container-toast {
+                bottom: 10px;
+                right: 10px;
+                left: 10px;
+                width: auto;
+            }
+
+            .flex-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <nav>
+        <a href="/" class="nav-brand" style="text-decoration: none;">MOTOR GELATO</a>
+        <div class="nav-links">
+            <a href="/" class="nav-link-btn">&#127968; Hub</a>
+            <a href="/estoque" class="nav-link-btn">&#128230; Estoque</a>
+            <a href="/dashboard" class="nav-link-btn">&#128202; Dashboard</a>
+            <span class="nav-link-btn nav-active">&#128187; Balc&atilde;o</span>
+            <a href="/producao" class="nav-link-btn">&#128104;&#8205;&#127859; Cozinha</a>
+            <button class="nav-link-btn" onclick="toggleThemeBalcao()" style="cursor:pointer;background:rgba(245,158,11,0.15);border-color:#f59e0b;color:#f59e0b;">&#127771; Tema</button>
+        </div>
+    </nav>
+
+    <header>
+        <div class="logo-area">
+            <h1>FRENTE DE LOJA (PDV)</h1>
+            <p>Controle da Vitrine Refrigerada e Alertas de Reposição</p>
+        </div>
+    </header>
+
+    <main>
+        <datalist id="listaReceitas"></datalist>
+
+        <div class="card-sobremesa">
+            <h3>🍧 Venda de Sobremesas (Baixa Direta)</h3>
+            <p>Registre Milkshakes, Cafés e Brownies para abater no estoque automaticamente.</p>
+            <div class="flex-row">
+                <input type="text" id="inSobremesa" list="listaReceitas" placeholder="Digite o que foi produzido..."
+                    style="flex-grow: 1;">
+                <input type="number" id="inSobremesaQtd" placeholder="Qtd" value="1" style="width: 80px;">
+                <button class="btn btn-primary" onclick="registrarSobremesa()">Registrar Saída</button>
+            </div>
+        </div>
+
+        <div class="card-sobremesa" style="border-left-color: #ef4444; background-color: #fef2f2;">
+            <h3 style="color: #b91c1c;">🪣 Registar Cuba Esvaziada (Vitrine)</h3>
+            <p>Secou um sabor na vitrine? Registe imediatamente antes de ir buscar outra cuba.</p>
+            <div class="flex-row">
+                <input type="text" id="inCubaVazia" list="listaReceitas" placeholder="Que sabor acabou?..."
+                    style="flex-grow: 1; border-color: #fca5a5;">
+                <button class="btn btn-primary" style="background: #ef4444; border-color: #dc2626;"
+                    onclick="registrarCubaVazia()">Confirmar Fim da Cuba</button>
+            </div>
+        </div>
+
+        <div class="card-sobremesa" style="border-left-color: #f59e0b; background-color: #fffbeb;">
+            <h3 style="color: #b45309;">🔄 Trocar/Completar Cuba (Refill)</h3>
+            <p>Pese o que sobrou na cuba velha e pese a nova cuba que você pegou no freezer.</p>
+            <div class="flex-row">
+                <input type="text" id="inSaborRefill" list="listaReceitas" placeholder="Sabor..." style="flex-grow: 1;">
+                <input type="number" id="inPesoRestante" placeholder="Sobrou (Kg)" step="0.1" style="width: 100px;">
+                <input type="number" id="inPesoNovo" placeholder="Peso Nova (Kg)" step="0.1" style="width: 120px;">
+                <button class="btn" style="background: #f59e0b; color: white;" onclick="registrarRefill()">Registrar Troca</button>
+            </div>
+        </div>
+
+        <div class="card-sobremesa" style="border-left-color: #8b5cf6; background-color: #f5f3ff;">
+            <h3 style="color: #6d28d9;">🌙 Fechamento: Retornar Vitrine</h3>
+            <p>Fim do expediente! Pese as cubas que estão voltando para o freezer para o sistema calcular o consumo final.</p>
+            <div class="flex-row">
+                <input type="text" id="inSaborRetorno" list="listaReceitas" placeholder="Sabor que está voltando..." style="flex-grow: 1;">
+                <input type="number" id="inPesoRetorno" placeholder="Peso Atual (Kg)" step="0.1" style="width: 120px;">
+                <button class="btn" style="background: #8b5cf6; color: white;" onclick="registrarRetornoBalcao()">Retornar p/ Freezer</button>
+            </div>
+        </div>
+
+        <details>
+            <summary>⚙️ Editor de Cubas do Dia (Alertas de Produção)</summary>
+            <div class="config-content">
+                <h3 class="section-title title-fixos">Sabores Fixos</h3>
+                <div id="inputs-fixos" class="input-group"></div>
+                <h3 class="section-title title-rotativos">Sabores Rotativos</h3>
+                <div id="inputs-rotativos" class="input-group"></div>
+                <button class="btn btn-save" onclick="salvarNovosSabores()">💾 Salvar e Atualizar Telas</button>
+            </div>
+        </details>
+
+        <h3 style="margin-bottom: 15px; font-size: 14px; color: #64748b;">CLIQUE PARA PEDIR GELATO PARA A COZINHA:</h3>
+        <div class="grid" id="gridSabores"></div>
+    </main>
+
+    <div id="container-toast"></div>
+
+    <script>
+        const IP_SERVIDOR = window.location.hostname;
+        const BASE_URL = `http://${IP_SERVIDOR}:8050`;
+        const WS_URL = `ws://${IP_SERVIDOR}:8050/ws/producao`;
+
+        async function carregarSugestoesReceitas() {
+            try {
+                const resp = await fetch(`${BASE_URL}/receitas`);
+                const receitas = await resp.json();
+                const datalist = document.getElementById('listaReceitas');
+                datalist.innerHTML = "";
+                receitas.forEach(r => {
+                    let option = document.createElement('option');
+                    option.value = r.nome;
+                    datalist.appendChild(option);
+                });
+            } catch (e) { console.error("Erro no autocompletar.", e); }
+        }
+
+        async function carregarSabores() {
+            try {
+                const resp = await fetch(`${BASE_URL}/sabores`);
+                const dados = await resp.json();
+                const grid = document.getElementById('gridSabores');
+                grid.innerHTML = "";
+                [...dados.fixos, ...dados.rotativos].forEach(sabor => {
+                    let btn = document.createElement('button');
+                    btn.className = 'btn-alerta';
+                    btn.innerHTML = `<span>${sabor}</span>`;
+                    btn.onclick = () => solicitarProducao(btn, sabor);
+                    grid.appendChild(btn);
+                });
+                montarInputs('inputs-fixos', dados.fixos, 'in-fixo');
+                montarInputs('inputs-rotativos', dados.rotativos, 'in-rotativo');
+
+                await carregarAlertasAtivosBalcao();
+            } catch (e) { console.error("Erro de conexão.", e); }
+        }
+
+        async function carregarAlertasAtivosBalcao() {
+            try {
+                const resp = await fetch(`${BASE_URL}/alertas_ativos`);
+                const ativos = await resp.json();
+                const botoes = document.querySelectorAll('.btn-alerta');
+                botoes.forEach(btn => {
+                    let textoBotao = btn.querySelector('span').innerText.toUpperCase().trim();
+                    if (ativos.includes(textoBotao)) {
+                        btn.classList.add('status-aguardando');
+                        btn.innerHTML = `<span>${textoBotao}</span><span style="font-size: 11px; font-weight: 800; opacity: 0.8; margin-top: 4px;">⏳ PEDIDO</span>`;
+                    }
+                });
+            } catch (e) { console.error("Erro ao carregar alertas ativos", e); }
+        }
+
+        function montarInputs(containerId, lista, classe) {
+            const container = document.getElementById(containerId);
+            container.innerHTML = "";
+            lista.forEach(nome => {
+                let input = document.createElement('input');
+                input.type = "text"; input.value = nome; input.className = classe;
+                input.setAttribute('list', 'listaReceitas');
+                container.appendChild(input);
+            });
+        }
+
+        async function salvarNovosSabores() {
+            const fixos = Array.from(document.querySelectorAll('.in-fixo')).map(i => i.value.trim().toUpperCase());
+            const rotativos = Array.from(document.querySelectorAll('.in-rotativo')).map(i => i.value.trim().toUpperCase());
+            await fetch(`${BASE_URL}/atualizar_sabores`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fixos, rotativos }) });
+            alert("Cardápio de Produção atualizado!");
+        }
+
+        async function registrarSobremesa() {
+            const sabor = document.getElementById('inSobremesa').value.toUpperCase().trim();
+            const qtd = parseFloat(document.getElementById('inSobremesaQtd').value || 1);
+            if (!sabor) return alert("Digite o nome da sobremesa vendida.");
+
+            await fetch(`${BASE_URL}/producao`, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sabor: sabor, quantidade: qtd })
+            });
+
+            document.getElementById('inSobremesa').value = "";
+            mostrarNotificacao(sabor + " (Baixa efetuada)");
+        }
+
+        async function solicitarProducao(botaoElemento, sabor) {
+            botaoElemento.classList.add('status-aguardando');
+            botaoElemento.innerHTML = `<span>${sabor}</span><span style="font-size: 11px; font-weight: 800; opacity: 0.8; margin-top: 4px;">⏳ PEDIDO</span>`;
+            await fetch(`${BASE_URL}/alerta_cuba`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sabor: sabor }) });
+        }
+
+        function conectarWebSocket() {
+            let socket = new WebSocket(WS_URL);
+            socket.onmessage = function (event) {
+                const dados = JSON.parse(event.data);
+                if (dados.acao === "produzido") {
+                    const botoes = document.querySelectorAll('.btn-alerta');
+                    let achou = false;
+                    botoes.forEach(btn => {
+                        let textoBotao = btn.querySelector('span').innerText.toUpperCase();
+                        if (textoBotao.includes(dados.sabor.toUpperCase().trim())) {
+                            btn.classList.remove('status-aguardando');
+                            btn.innerHTML = `<span>${textoBotao}</span>`;
+                            achou = true;
+                        }
+                    });
+                    if (achou) mostrarNotificacao(dados.sabor + " produzido!");
+                } else if (dados.acao === "atualizar_cardapio") { carregarSabores(); }
+            };
+            socket.onclose = () => setTimeout(conectarWebSocket, 3000);
+        }
+
+        function mostrarNotificacao(texto) {
+            const container = document.getElementById('container-toast');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            toast.innerHTML = `<div class="toast-content"><div class="icone-check">✓</div><div><b>${texto}</b></div></div><button class="btn-fechar-toast" onclick="fecharNotificacao(this)">✕</button>`;
+            container.appendChild(toast);
+        }
+
+        function fecharNotificacao(botaoElemento) {
+            const toast = botaoElemento.parentElement;
+            toast.style.animation = 'fadeOut 0.2s ease-in forwards';
+            setTimeout(() => toast.remove(), 200);
+        }
+
+        async function registrarCubaVazia() {
+            const sabor = document.getElementById('inCubaVazia').value.toUpperCase().trim();
+            if (!sabor) return alert("Digite o nome da cuba que esvaziou na vitrine.");
+
+            if (confirm(`Confirmar que a cuba de ${sabor} acabou por completo?`)) {
+                try {
+                    await fetch(`${BASE_URL}/cuba_esvaziada`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sabor: sabor })
+                    });
+
+                    document.getElementById('inCubaVazia').value = "";
+                    mostrarNotificacao(`Cuba de ${sabor} registada como vazia!`);
+                } catch (e) {
+                    alert("Erro ao registar a cuba vazia. Verifique a ligação.");
+                }
+            }
+        }
+
+        async function registrarRefill() {
+            const sabor = document.getElementById('inSaborRefill').value.toUpperCase().trim();
+            const pesoRestante = parseFloat(document.getElementById('inPesoRestante').value);
+            const pesoNovo = parseFloat(document.getElementById('inPesoNovo').value);
+
+            if (!sabor || isNaN(pesoRestante) || isNaN(pesoNovo)) return alert("Informe o sabor, o que sobrou e o peso da nova cuba.");
+
+            await fetch(`${BASE_URL}/cuba_refill`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sabor: sabor, peso_restante: pesoRestante, peso_novo: pesoNovo })
+            });
+
+            document.getElementById('inSaborRefill').value = "";
+            document.getElementById('inPesoRestante').value = "";
+            document.getElementById('inPesoNovo').value = "";
+            mostrarNotificacao(`Troca de ${sabor} registrada e descontada do freezer!`);
+        }
+
+        async function registrarRetornoBalcao() {
+            const sabor = document.getElementById('inSaborRetorno').value.toUpperCase().trim();
+            const peso = parseFloat(document.getElementById('inPesoRetorno').value);
+
+            if (!sabor || isNaN(peso)) return alert("Informe o sabor e o peso que está voltando.");
+
+            await fetch(`${BASE_URL}/retornar_vitrine`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ sabor: sabor, peso: peso })
+            });
+
+            document.getElementById('inSaborRetorno').value = "";
+            document.getElementById('inPesoRetorno').value = "";
+            mostrarNotificacao(`${sabor} retornado ao freezer (consumo do dia registrado)!`);
+        }
+
+        function toggleThemeBalcao() {
+            let curr = localStorage.getItem('theme-balcao') || 'dark';
+            let next = curr === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('theme-balcao', next);
+            if (next === 'light') {
+                document.body.setAttribute('data-theme', 'light');
+            } else {
+                document.body.removeAttribute('data-theme');
+            }
+        }
+        (function(){
+            if (localStorage.getItem('theme-balcao') === 'light') {
+                document.body.setAttribute('data-theme', 'light');
+            }
+        })();
+
+        window.onload = () => { carregarSabores(); carregarSugestoesReceitas(); conectarWebSocket(); };
+    </script>
+    <footer style="text-align:center;padding:20px;border-top:1px solid rgba(245,158,11,0.1);font-size:11px;color:#78716c;position:relative;z-index:1;margin-top:20px;">
+        Motor Gelato ERP &nbsp;&mdash;&nbsp;
+        <a href="https://github.com/saldanha55" target="_blank" style="color:#f59e0b;text-decoration:none;font-weight:700;">github.com/saldanha55</a>
+    </footer>
+</body>
+
+</html>

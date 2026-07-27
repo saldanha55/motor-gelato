@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Motor Gelato — Gestão de Almoxarifado, Controle de Estoque e Inteligência de Compras MRP.">
+    <title>Motor Gelato — Gestão de Estoque</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+    <nav>
+        <a href="/" class="nav-brand">MOTOR GELATO</a>
+        <div class="nav-links">
+            <div class="nav-item nav-active" onclick="mudarAba('aba-estoque', this)">&#128230; Estoque</div>
+            <div class="nav-item" onclick="mudarAba('aba-transferencias', this)">&#128260; Transfer&ecirc;ncias</div>
+            <div class="nav-item" onclick="mudarAba('aba-mrp', this)">&#129504; Compras</div>
+            <div class="nav-item" onclick="mudarAba('aba-nfe', this)">&#129150; NF-e</div>
+            <div class="nav-item" onclick="mudarAba('aba-config', this)">&#10133; Insumo</div>
+            <span style="width:1px;height:20px;background:var(--border);margin:0 6px;align-self:center;"></span>
+            <a class="nav-item" href="/" style="text-decoration:none;">&#127968; Hub</a>
+            <a class="nav-item" href="/dashboard" style="text-decoration:none;">&#128202; Dashboard</a>
+            <a class="nav-item" href="/producao" style="text-decoration:none;">&#128104;&#8205;&#127859; Cozinha</a>
+            <a class="nav-item" href="/balcao" style="text-decoration:none;">&#127978; Balc&atilde;o</a>
+            <button class="nav-item" onclick="toggleTheme()"
+                style="background:none;border:none;cursor:pointer;font-family:inherit;">&#127771; Tema</button>
+        </div>
+    </nav>
+
+    <main>
+
+        <!-- ====================== ABA: ESTOQUE CENTRAL ====================== -->
+        <div id="aba-estoque" class="aba aba-ativa">
+            <div class="card">
+                <div class="grid-header">
+                    <div>
+                        <h2>📦 Estoque Central e Validades</h2>
+                        <p style="color: var(--text-muted); font-size: 14px; margin-top: 5px;">
+                            Saldos em Almoxarifado e Cozinha, validades e configuração de alertas.
+                        </p>
+                    </div>
+                    <button class="btn btn-primary" style="font-size: 15px; padding: 12px 24px;"
+                        onclick="iniciarContagemMobile()">📱 Realizar Contagem</button>
+                </div>
+
+                <div class="flex-search" style="margin-bottom: 15px;">
+                    <input type="text" id="buscaConfigAlertas" class="search-bar"
+                        style="flex-grow: 1; min-width: 250px;"
+                        onkeyup="filtrarTabelaDOM('buscaConfigAlertas', 'tabelaConfigAlertas')"
+                        placeholder="🔍 Buscar insumo...">
+                    <label style="color: var(--text-muted); font-size: 14px; display: flex; align-items: center; gap: 8px; cursor: pointer; font-weight: bold;">
+                        <input type="checkbox" id="checkMostrarOcultos" onchange="carregarInventarioMassa()"
+                            style="width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer;">
+                        👁️ Ver Insumos Escondidos
+                    </label>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Insumo</th>
+                                <th>Almoxarifado</th>
+                                <th>Cozinha</th>
+                                <th>Validade (Lote Antigo)</th>
+                                <th>Gatilho de Compra</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaConfigAlertas"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====================== ABA: TRANSFERÊNCIAS (NOVO) ====================== -->
+        <div id="aba-transferencias" class="aba">
+
+            <!-- Pipeline Visual do Fluxo de 3 Níveis -->
+            <div class="pipeline-flow">
+                <div class="pipeline-nivel">
+                    <div class="pipeline-nivel-titulo">
+                        <span class="nivel-badge nivel-almoxarifado">📦 Nível 1</span>
+                    </div>
+                    <div class="pipeline-nivel-valor" id="pipeAlmoxTotal">—</div>
+                    <div class="pipeline-nivel-unidade">Itens no Almoxarifado</div>
+                </div>
+                <div class="pipeline-nivel">
+                    <div class="pipeline-nivel-titulo">
+                        <span class="nivel-badge nivel-cozinha">👨‍🍳 Nível 2</span>
+                    </div>
+                    <div class="pipeline-nivel-valor" id="pipeCozinhaTotal">—</div>
+                    <div class="pipeline-nivel-unidade">Itens na Cozinha</div>
+                </div>
+                <div class="pipeline-nivel">
+                    <div class="pipeline-nivel-titulo">
+                        <span class="nivel-badge nivel-vitrine">🏪 Nível 3</span>
+                    </div>
+                    <div class="pipeline-nivel-valor" id="pipeVitrineTotal">—</div>
+                    <div class="pipeline-nivel-unidade">Itens na Vitrine</div>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px;">
+
+                <!-- Formulário: Almoxarifado → Cozinha -->
+                <div class="card" style="margin-bottom: 0;">
+                    <h3 style="margin-bottom: 5px;">📦 → 👨‍🍳 Almoxarifado para Cozinha</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+                        Move insumos do estoque bruto para a linha de produção.
+                        A conversão de unidade é aplicada automaticamente.
+                    </p>
+                    <div class="input-group">
+                        <label>Insumo</label>
+                        <select id="transAlmoxIngrediente"></select>
+                    </div>
+                    <div style="display: flex; gap: 15px;">
+                        <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                            <label>Quantidade a Transferir</label>
+                            <input type="number" id="transAlmoxQtd" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                            <label>Observação (opcional)</label>
+                            <input type="text" id="transAlmoxObs" placeholder="Ex: Lote de segunda-feira">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary" style="width: 100%; margin-top: 18px; padding: 12px;"
+                        onclick="executarTransferencia('almoxarifado', 'cozinha')">
+                        🔄 Confirmar Transferência
+                    </button>
+                </div>
+
+                <!-- Formulário: Cozinha → Vitrine -->
+                <div class="card" style="margin-bottom: 0;">
+                    <h3 style="margin-bottom: 5px;">👨‍🍳 → 🏪 Cozinha para Vitrine</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-bottom: 20px;">
+                        Move produto acabado do freezer da cozinha para o ponto de venda.
+                        Operação registrada em auditoria para rastreabilidade total.
+                    </p>
+                    <div class="input-group">
+                        <label>Produto</label>
+                        <select id="transCozIngrediente"></select>
+                    </div>
+                    <div style="display: flex; gap: 15px;">
+                        <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                            <label>Quantidade a Transferir</label>
+                            <input type="number" id="transCozQtd" step="0.01" min="0" placeholder="0.00">
+                        </div>
+                        <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                            <label>Observação (opcional)</label>
+                            <input type="text" id="transCozObs" placeholder="Ex: Turno da tarde">
+                        </div>
+                    </div>
+                    <button class="btn btn-add" style="width: 100%; margin-top: 18px; padding: 12px;"
+                        onclick="executarTransferencia('cozinha', 'vitrine')">
+                        🔄 Confirmar Transferência
+                    </button>
+                </div>
+            </div>
+
+            <!-- Histórico de Transferências -->
+            <div class="card">
+                <div class="grid-header">
+                    <div>
+                        <h3>📋 Histórico de Transferências</h3>
+                        <p style="color: var(--text-muted); font-size: 13px;">Log auditável de todas as movimentações entre os 3 níveis.</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="carregarTransferencias()">🔄 Atualizar</button>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Insumo/Produto</th>
+                                <th>Qtd. Origem</th>
+                                <th>De</th>
+                                <th>Para</th>
+                                <th>Observação</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaTransferencias">
+                            <tr><td colspan="6" style="text-align:center; padding: 20px; color: var(--text-muted);">Clique em "Atualizar" para carregar.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====================== ABA: INTELIGÊNCIA DE COMPRAS (MRP) ====================== -->
+        <div id="aba-mrp" class="aba">
+            <div class="card">
+                <div class="grid-header">
+                    <div>
+                        <h2>🧠 Lista Inteligente de Compras</h2>
+                        <p style="color: var(--text-muted); font-size: 14px;">
+                            Insumos que atingiram o gatilho, ajustados pela previsão climática.
+                        </p>
+                    </div>
+                    <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                        <button class="btn" style="background: var(--text-muted); color: white;"
+                            onclick="dispararEmailAutomatico()">📧 Enviar E-mail</button>
+                        <button class="btn btn-primary" onclick="carregarMRPVisual()">🔄 Atualizar</button>
+                        <button class="btn" style="background: var(--bg-body); border: 1px solid var(--border);"
+                            onclick="resetarItensOcultosHoje()">👁️ Mostrar Ocultados</button>
+                        <button class="btn btn-add" onclick="baixarExcelMRP()">📥 Exportar CSV</button>
+                    </div>
+                </div>
+
+                <!-- Card de tendência climática (preenchido via JS) -->
+                <div id="cardClima"
+                    style="background: rgba(20, 184, 166, 0.08); padding: 18px; border-radius: 12px; border: 1px solid var(--primary); margin-bottom: 20px; display: none; align-items: center; gap: 20px;">
+                    <div style="font-size: 36px;" id="iconeClima">☀️</div>
+                    <div>
+                        <h3 style="color: var(--primary); margin-bottom: 5px; font-size: 16px;" id="tituloClima">Analisando clima local...</h3>
+                        <p style="color: var(--text-main); font-size: 13px; margin: 0;" id="textoClima">Aguarde enquanto consultamos os dados meteorológicos.</p>
+                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Insumo</th>
+                                <th>Burn Rate</th>
+                                <th>Lead Time</th>
+                                <th>Estoque Atual</th>
+                                <th>Comprar (30 Dias)</th>
+                                <th style="text-align: center;">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaMRPVisual">
+                            <tr><td colspan="6" style="text-align:center; color: var(--text-muted); padding: 20px;">Clique em "Atualizar" para gerar a lista.</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====================== ABA: HISTÓRICO NF-e ====================== -->
+        <div id="aba-nfe" class="aba">
+            <div class="card">
+                <div class="grid-header">
+                    <h2>🧾 Histórico de Notas Fiscais (Entradas)</h2>
+                    <div style="display: flex; gap: 10px; align-items: center;">
+                        <input type="file" id="inputXmlNfe" accept=".xml" style="display: none;"
+                            onchange="lerXmlNfe(event)">
+                        <button class="btn btn-add"
+                            onclick="document.getElementById('inputXmlNfe').click()">➕ Importar XML</button>
+                    </div>
+                </div>
+                <div class="table-responsive">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Data/Hora</th>
+                                <th>Insumo</th>
+                                <th>Quantidade</th>
+                                <th>Origem</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabelaHistoricoEntradas"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ====================== ABA: CADASTRO DE NOVO INSUMO ====================== -->
+        <div id="aba-config" class="aba">
+            <div class="card" style="max-width: 600px; margin: 0 auto;">
+                <h2 style="margin-bottom: 8px; color: var(--primary);">📦 Cadastrar Novo Insumo</h2>
+                <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 25px;">
+                    Adicione manualmente insumos que não vieram por XML ou itens sazonais.
+                </p>
+
+                <div class="input-group">
+                    <label>Nome do Insumo</label>
+                    <input type="text" id="ingNome" placeholder="Ex: Saco de Açúcar, Embalagem..."
+                        style="text-transform: uppercase;">
+                </div>
+
+                <div style="display: flex; gap: 15px; margin-bottom: 15px;">
+                    <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Unidade de Compra</label>
+                        <select id="ingUnidadeAlmox">
+                            <option value="Caixa">Caixa</option>
+                            <option value="Fardo">Fardo</option>
+                            <option value="Saco">Saco</option>
+                            <option value="Pote">Pote</option>
+                            <option value="UN">Unidade (UN)</option>
+                            <option value="KG">Quilo (KG)</option>
+                            <option value="L">Litro (L)</option>
+                        </select>
+                    </div>
+                    <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Preço Unitário (R$)</label>
+                        <input type="number" id="ingPreco" step="0.01" placeholder="0.00">
+                    </div>
+                </div>
+
+                <div style="display: flex; gap: 15px; margin-bottom: 25px;">
+                    <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Estoque Inicial</label>
+                        <input type="number" id="ingEstoqueAlmox" step="0.01" placeholder="Ex: 5">
+                    </div>
+                    <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                        <label>Avisar quando chegar a:</label>
+                        <input type="number" id="ingLimite" step="0.01" value="2">
+                    </div>
+                </div>
+
+                <button class="btn btn-add" style="width: 100%; padding: 14px; font-size: 15px;"
+                    onclick="salvarIngredienteUnificado()">💾 Cadastrar e Salvar</button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- ====================== MODAL: INVENTÁRIO MOBILE ====================== -->
+    <div id="modalContagemMobile"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 9999; flex-direction: column;">
+        <div style="padding: 20px; background: var(--bg-body); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">📱 Inventário Físico</h3>
+            <span id="contadorProgresso" style="color: var(--primary); font-weight: 800;">0/0</span>
+        </div>
+        <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px;">
+            <h2 id="nomeInsumoMobile" style="text-align: center; margin-bottom: 5px; font-size: 28px;">Insumo</h2>
+            <p id="unidadeInsumoMobile" style="color: var(--text-muted); margin-bottom: 30px; font-size: 16px;">Unidade</p>
+            <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 5px;">Estoque Contado:</label>
+            <input type="number" id="inputContagemMobile" step="0.01" inputmode="decimal"
+                style="width: 80%; font-size: 40px; text-align: center; padding: 15px; border-radius: 12px; border: 2px solid var(--primary); margin-bottom: 30px; outline: none; background: var(--bg-card); color: var(--text-main);">
+            <label style="color: var(--text-muted); font-weight: bold; margin-bottom: 5px;">Validade do Lote Mais Antigo:</label>
+            <input type="month" id="inputValidadeMobile"
+                style="width: 80%; font-size: 20px; text-align: center; padding: 15px; border-radius: 12px; border: 1px solid var(--border); background: var(--bg-card); color: var(--text-main); outline: none;">
+        </div>
+        <div style="padding: 20px; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; border-top: 1px solid var(--border); background: var(--bg-body);">
+            <button class="btn" onclick="contagemAnterior()" style="background: var(--text-muted); color: white; padding: 14px; border-radius: 12px;">⬅️ Voltar</button>
+            <button class="btn btn-warning" onclick="pausarContagem()" style="padding: 14px; border-radius: 12px;">⏸️ Pausar</button>
+            <button class="btn btn-primary" id="btnProximaContagem" onclick="contagemProxima()" style="padding: 14px; border-radius: 12px;">Próximo ➡️</button>
+        </div>
+    </div>
+
+    <!-- ====================== MODAL: REVISÃO DO INVENTÁRIO ====================== -->
+    <div id="modalResumoContagem"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: var(--bg-body); z-index: 9999; flex-direction: column;">
+        <div style="padding: 20px; background: var(--bg-body); border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center;">
+            <h3 style="margin: 0;">📋 Revisão do Inventário</h3>
+        </div>
+        <div style="flex-grow: 1; overflow-y: auto; padding: 20px;">
+            <ul id="listaResumo" style="list-style: none; padding: 0; margin: 0;"></ul>
+        </div>
+        <div style="padding: 20px; display: grid; grid-template-columns: 1fr 2fr; gap: 15px; border-top: 1px solid var(--border); background: var(--bg-body);">
+            <button class="btn" onclick="document.getElementById('modalResumoContagem').style.display='none'; document.getElementById('modalContagemMobile').style.display='flex';"
+                style="background: var(--text-muted); color: white; padding: 18px; border-radius: 12px;">Voltar</button>
+            <button class="btn btn-add" onclick="enviarContagemAoServidor()"
+                style="padding: 18px; border-radius: 12px; font-size: 16px; font-weight: bold;">💾 Confirmar e Salvar</button>
+        </div>
+    </div>
+
+    <!-- ====================== MODAL: IMPORTAR NF-e ====================== -->
+    <div id="modalNfe"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); align-items: center; justify-content: center; z-index: 2000; padding: 20px; backdrop-filter: blur(4px);">
+        <div class="card" style="width: 95%; max-width: 900px; margin: 0; display: flex; flex-direction: column; height: 90vh;">
+            <div class="grid-header" style="padding-bottom: 15px; border-bottom: 1px solid var(--border); flex-shrink: 0;">
+                <div>
+                    <h3 style="color: var(--primary);">🧾 Importar Itens da NF-e</h3>
+                    <p style="color: var(--text-muted); font-size: 13px; margin-top: 4px;">
+                        Vincule os produtos da nota aos insumos cadastrados no sistema.
+                    </p>
+                </div>
+                <button class="btn-acao btn-del" onclick="fecharModalNfe()">✕ Fechar</button>
+            </div>
+            <div class="table-responsive" style="flex-grow: 1; margin-top: 15px;">
+                <table style="min-width: 800px;">
+                    <thead>
+                        <tr>
+                            <th>Produto na Nota Fiscal</th>
+                            <th>Qtd.</th>
+                            <th>Vincular ao Insumo</th>
+                            <th>Preço Unit.</th>
+                            <th>Fator Conversão</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tabelaItensNfe"></tbody>
+                </table>
+            </div>
+            <div style="padding-top: 20px; border-top: 1px solid var(--border); margin-top: auto; flex-shrink: 0;">
+                <button class="btn btn-add" style="width: 100%; padding: 14px; font-size: 15px;"
+                    onclick="salvarEntradaNfe()">💾 Confirmar e Lançar no Estoque</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ====================== MODAL: EDITAR INTELIGÊNCIA DO INSUMO ====================== -->
+    <div id="modalEdicaoInsumo"
+        style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.85); align-items: center; justify-content: center; z-index: 3000; backdrop-filter: blur(4px);">
+        <div class="card" style="width: 90%; max-width: 500px; margin: 0;">
+            <h3 style="color: var(--primary); margin-bottom: 20px; font-size: 20px;">✏️ Editar Inteligência de Compras</h3>
+            <input type="hidden" id="editIdInsumo">
+
+            <div class="input-group">
+                <label>Nome do Insumo</label>
+                <input type="text" id="editNomeInsumo" disabled
+                    style="color: var(--text-muted); border-style: dashed;">
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 10px;">
+                <div class="input-group" style="flex: 1;">
+                    <label>Gatilho Antigo</label>
+                    <input type="number" id="editLimiteInsumo" step="0.01" style="color: var(--danger); font-weight: bold;">
+                </div>
+                <div class="input-group" style="flex: 1;">
+                    <label>Lead Time (Dias)</label>
+                    <input type="number" id="editLeadTime" step="1" style="color: var(--warning); font-weight: bold;">
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-bottom: 20px; align-items: center;">
+                <div class="input-group" style="flex: 1; margin-bottom: 0;">
+                    <label>Burn Rate (Unidade/Dia)</label>
+                    <input type="number" id="editBurnRate" step="0.01" style="color: var(--primary); font-weight: bold;">
+                </div>
+                <div style="flex: 1; display: flex; align-items: center; gap: 10px; margin-top: 15px;">
+                    <input type="checkbox" id="editVolatil" style="width: 20px; height: 20px; accent-color: var(--primary);">
+                    <label style="margin: 0; font-weight: bold; cursor: pointer;" for="editVolatil">Sensível ao Clima?</label>
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 15px; margin-top: 15px;">
+                <button class="btn" style="flex: 1; background: var(--bg-body); border: 1px solid var(--border);"
+                    onclick="document.getElementById('modalEdicaoInsumo').style.display='none'">Cancelar</button>
+                <button class="btn btn-primary" style="flex: 2; font-size: 15px;"
+                    onclick="salvarEdicaoInsumo()">💾 Salvar Parâmetros</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/config.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/estoque.js"></script>
+    <script src="js/dashboard.js"></script>
+    <script>
+        /**
+         * Carrega a lista de ingredientes nos selects de transferência.
+         * Executado ao abrir a aba de Transferências.
+         */
+        async function popularSelectsTransferencia() {
+            try {
+                const resp = await fetch(`${BASE_URL}/ingredientes`);
+                const ingredientes = await resp.json();
+                const opcoes = ingredientes
+                    .filter(i => !i.escondido)
+                    .map(i => `<option value="${i.id}">${i.nome} (${i.unidade_almoxarifado})</option>`)
+                    .join('');
+                document.getElementById('transAlmoxIngrediente').innerHTML = opcoes;
+                document.getElementById('transCozIngrediente').innerHTML = ingredientes
+                    .filter(i => !i.escondido)
+                    .map(i => `<option value="${i.id}">${i.nome} (${i.unidade})</option>`)
+                    .join('');
+            } catch (e) {
+                console.error('Erro ao carregar ingredientes para os selects:', e);
+            }
+        }
+
+        /**
+         * Executa uma transferência de estoque entre dois níveis.
+         * @param {string} origem - Nível de origem ('almoxarifado' ou 'cozinha').
+         * @param {string} destino - Nível de destino ('cozinha' ou 'vitrine').
+         */
+        async function executarTransferencia(origem, destino) {
+            const idSelect = origem === 'almoxarifado' ? 'transAlmoxIngrediente' : 'transCozIngrediente';
+            const idQtd   = origem === 'almoxarifado' ? 'transAlmoxQtd' : 'transCozQtd';
+            const idObs   = origem === 'almoxarifado' ? 'transAlmoxObs' : 'transCozObs';
+
+            const itemId = parseInt(document.getElementById(idSelect).value);
+            const qtd = parseFloat(document.getElementById(idQtd).value);
+            const obs = document.getElementById(idObs).value;
+
+            if (!qtd || qtd <= 0) {
+                alert('Digite uma quantidade válida para a transferência.');
+                return;
+            }
+
+            const rota = `/transferencia/${origem}-para-${destino}`;
+
+            try {
+                const resp = await fetch(`${BASE_URL}${rota}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        item_id: itemId,
+                        qtd_transferida: qtd,
+                        origem: origem,
+                        destino: destino,
+                        observacao: obs
+                    })
+                });
+
+                const dados = await resp.json();
+
+                if (!resp.ok) {
+                    alert('❌ Erro: ' + (dados.detail || 'Falha na transferência.'));
+                    return;
+                }
+
+                alert(`✅ Transferência realizada com sucesso!\n${origem} → ${destino}`);
+                document.getElementById(idQtd).value = '';
+                document.getElementById(idObs).value = '';
+                carregarTransferencias();
+            } catch (e) {
+                alert('🔌 Erro de conexão com o servidor.');
+            }
+        }
+
+        // Intercepts mudarAba para popular os selects na aba de transferências
+        const _mudarAbaOriginal = mudarAba;
+        window.mudarAba = function(id, btn) {
+            _mudarAbaOriginal(id, btn);
+            if (id === 'aba-transferencias') {
+                popularSelectsTransferencia();
+                carregarTransferencias();
+            }
+        };
+
+        // Inicialização
+        window.onload = () => carregarInventarioMassa();
+
+        // Toggle de Tema Independente
+        function toggleTheme() {
+            let curr = localStorage.getItem('theme-estoque') || 'dark';
+            let next = curr === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('theme-estoque', next);
+            if (next === 'light') {
+                document.body.setAttribute('data-theme', 'light');
+            } else {
+                document.body.removeAttribute('data-theme');
+            }
+        }
+        (function(){
+            if (localStorage.getItem('theme-estoque') === 'light') {
+                document.body.setAttribute('data-theme', 'light');
+            }
+        })();
+    </script>
+    <footer style="text-align:center;padding:20px;border-top:1px solid var(--border);font-size:11px;color:var(--text-muted);position:relative;z-index:1;margin-top:20px;">
+        Motor Gelato ERP &nbsp;&mdash;&nbsp;
+        <a href="https://github.com/saldanha55" target="_blank" style="color:var(--primary);text-decoration:none;font-weight:700;">github.com/saldanha55</a>
+    </footer>
+</body>
+
+</html>
+

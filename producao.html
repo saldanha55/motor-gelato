@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="Motor Gelato — Módulo de Cozinha e Produção. Registre lotes em tempo real.">
+    <title>Motor Gelato — Cozinha & Produção</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
+        .btn-sabor, .btn-tecla, .btn-acao { user-select: none; }
+        body { background-color: #0f172a; color: #f1f5f9; min-height: 100vh; display: flex; flex-direction: column; overflow-y: auto; }
+        
+        /* NAVBAR GLOBAL */
+        #nav-wrapper { transition: margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1); position: relative;}
+        nav { background: #020617; padding: 0 15px; min-height: 60px; display: flex; align-items: center; justify-content: space-between; color: white; flex-wrap: wrap;}
+        .nav-brand { font-weight: 900; font-size: 18px; color: #f59e0b; letter-spacing: 1px;}
+        .nav-links { display: flex; gap: 10px; overflow-x: auto; scrollbar-width: none; align-items: center;}
+        .nav-links::-webkit-scrollbar { display: none; }
+        .nav-link-btn { background: #1e293b; color: white; border: 1px solid #334155; padding: 8px 15px; border-radius: 8px; font-size: 13px; font-weight: bold; cursor: pointer; text-decoration: none; transition: 0.2s; white-space: nowrap;}
+        .nav-link-btn:hover { background: #334155; }
+        .nav-active { background: rgba(245,158,11,0.2) !important; border-color: #f59e0b !important; color: #f59e0b !important;}
+        
+        .btn-toggle-nav { position: absolute; bottom: -25px; left: 50%; transform: translateX(-50%); background: #020617; border: 1px solid #334155; border-top: none; color: #94a3b8; padding: 5px 20px; border-radius: 0 0 10px 10px; cursor: pointer; font-size: 12px; font-weight: bold; z-index: 50;}
+
+        /* CONTEUDO PRODUÇÃO */
+        .content-area { padding: 15px; display: flex; flex-direction: column; flex-grow: 1;}
+        header { text-align: center; height: auto; min-height: 50px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 15px; padding: 10px; flex-wrap: wrap; gap: 10px; margin-top: 15px;}
+        h1 { font-size: clamp(1.2rem, 3vw, 1.8rem); color: #94a3b8; font-weight: 800; letter-spacing: 1px; flex-grow: 1; text-align: center; }
+        
+        .btn-extra {
+            background: #3b82f6; color: white; border: none; border-radius: 10px; 
+            padding: 12px 20px; font-weight: bold; cursor: pointer; font-size: clamp(14px, 2vw, 18px);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2); transition: 0.1s;
+        }
+        .btn-extra:active { transform: scale(0.95); background: #2563eb; }
+
+        .grid { 
+            display: grid; 
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); 
+            grid-auto-rows: 1fr; 
+            gap: 15px; 
+            flex-grow: 1; 
+        }
+        
+        .btn-sabor { 
+            background: #1e293b; border: 2px solid #334155; border-radius: 16px; padding: 15px;
+            font-size: clamp(14px, 2.5vw, 24px); 
+            font-weight: 800; text-align: center; cursor: pointer;
+            color: #f1f5f9; display: flex; align-items: center; justify-content: center;
+            transition: transform 0.1s, box-shadow 0.2s; text-transform: uppercase; 
+            height: 100%; width: 100%; min-height: 90px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .btn-sabor:active { transform: scale(0.95); box-shadow: none; border-color: #475569;}
+        
+        .fixo { border-left: 8px solid #38bdf8; } 
+        .rotativo { border-left: 8px solid #fb923c; }
+
+        @keyframes piscarVermelhoForte {
+            0% { background: #1e293b; color: #f1f5f9; border-color: #334155; transform: scale(1); }
+            50% { background: #ef4444; color: #ffffff; border-color: #b91c1c; box-shadow: 0 0 30px rgba(239, 68, 68, 0.8); transform: scale(1.03); }
+            100% { background: #1e293b; color: #f1f5f9; border-color: #334155; transform: scale(1); }
+        }
+        .alerta-ativo { animation: piscarVermelhoForte 1.2s infinite ease-in-out !important; z-index: 10; }
+
+        #modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.95); align-items: center; justify-content: center; z-index: 1000; backdrop-filter: blur(4px); overflow-y: auto; padding: 20px;}
+        .modal-content { background: #1e293b; padding: 25px; border-radius: 20px; width: 100%; max-width: 450px; text-align: center; border: 1px solid #334155; margin: auto; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);}
+        
+        #saborSelecionado { font-size: 1.5rem; margin-bottom: 15px; color: #f1f5f9; font-weight: 800; text-transform: uppercase;}
+        
+        #inputNomeExtra {
+            width: 100%; padding: 15px; font-size: 1.2rem; text-align: center;
+            background: #334155; color: #f1f5f9; border: 2px dashed #64748b; 
+            border-radius: 12px; margin-bottom: 20px; text-transform: uppercase; outline: none;
+        }
+        #inputNomeExtra:focus { border-color: #3b82f6; background: #1e293b; }
+
+        #displayPeso { font-size: 3.5rem; background: #0f172a; color: #38bdf8; border-radius: 16px; padding: 20px; margin-bottom: 20px; font-weight: 900; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5);}
+        
+        .teclado { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+        .btn-tecla { background: #334155; border: none; border-radius: 12px; font-size: 1.8rem; padding: 18px 0; font-weight: bold; color: #f1f5f9; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2);}
+        .btn-tecla:active { background: #475569; color: #38bdf8; transform: translateY(2px); box-shadow: none;}
+        
+        .acoes { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .btn-acao { padding: 20px; font-size: 1.2rem; border: none; border-radius: 12px; font-weight: 800; color: white; cursor: pointer;}
+        .btn-cancelar { background: #ef4444; } .btn-enviar { background: #10b981; }
+
+        #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(15, 23, 42, 0.9); align-items: center; justify-content: center; z-index: 2000; font-size: 2rem; color: #38bdf8; font-weight: bold;}
+
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: repeat(2, 1fr); gap: 10px;}
+            .btn-sabor { min-height: 80px; padding: 10px; border-radius: 12px;}
+            .btn-tecla { padding: 15px 0; font-size: 1.5rem; }
+            #displayPeso { font-size: 3rem; padding: 15px;}
+            .btn-acao { padding: 15px; font-size: 1.1rem; }
+            nav { flex-direction: column; padding: 10px; gap: 10px; align-items: stretch;}
+            .nav-links { width: 100%; justify-content: flex-start;}
+        }
+    </style>
+</head>
+<body>
+
+    <datalist id="listaReceitasExtra"></datalist>
+
+    <div id="nav-wrapper">
+        <nav>
+            <a href="/" class="nav-brand" style="color:#f59e0b;font-weight:900;font-size:18px;letter-spacing:1px;text-decoration:none;">MOTOR GELATO</a>
+            <div class="nav-links">
+                <a href="/" class="nav-link-btn">&#127968; Hub</a>
+                <a href="/estoque" class="nav-link-btn">&#128230; Estoque</a>
+                <a href="/dashboard" class="nav-link-btn">&#128202; Dashboard</a>
+                <a href="/balcao" class="nav-link-btn">&#128187; Balc&atilde;o</a>
+                <span class="nav-link-btn nav-active">&#128104;&#8205;&#127859; Cozinha</span>
+                <button class="nav-link-btn" onclick="toggleThemeProd()" style="cursor:pointer;background:rgba(245,158,11,0.15);border-color:#f59e0b;color:#f59e0b;">&#127771; Tema</button>
+            </div>
+        </nav>
+        <button class="btn-toggle-nav" id="btnToggleNav" onclick="toggleNav()">▲ ESCONDER MENU</button>
+    </div>
+
+    <div class="content-area">
+        <header>
+            <h1 id="tituloApp">COZINHA & PRODUÇÃO</h1>
+            <button class="btn-extra" onclick="abrirModalExtra()">➕ EXTRA</button>
+        </header>
+
+        <div class="grid" id="gridSabores"></div>
+    </div>
+
+    <div id="modal">
+        <div class="modal-content">
+            <div id="saborSelecionado">Sabor</div>
+            
+            <div id="infoVitrine" style="background: #334155; padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 13px; color: #94a3b8; display: none; font-weight: bold;">
+                A procurar histórico da vitrine... ⏳
+            </div>
+            
+            <input type="text" id="inputNomeExtra" list="listaReceitasExtra" placeholder="Digite o sabor..." autocomplete="off">
+            
+            <div id="displayPeso">0</div>
+            <div class="teclado">
+                <button class="btn-tecla" onclick="digitar('1')">1</button>
+                <button class="btn-tecla" onclick="digitar('2')">2</button>
+                <button class="btn-tecla" onclick="digitar('3')">3</button>
+                <button class="btn-tecla" onclick="digitar('4')">4</button>
+                <button class="btn-tecla" onclick="digitar('5')">5</button>
+                <button class="btn-tecla" onclick="digitar('6')">6</button>
+                <button class="btn-tecla" onclick="digitar('7')">7</button>
+                <button class="btn-tecla" onclick="digitar('8')">8</button>
+                <button class="btn-tecla" onclick="digitar('9')">9</button>
+                <button class="btn-tecla" onclick="digitar('C')" style="color:#ef4444">C</button>
+                <button class="btn-tecla" onclick="digitar('0')">0</button>
+                <button class="btn-tecla" onclick="digitar('.')">,</button>
+            </div>
+            
+            <div class="acoes-producao" style="display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px;">
+                <button class="btn-acao btn-enviar" onclick="enviarDados('producao')" style="background: #3b82f6;">🪣 1. BATER BALDE (Nova Produção)</button>
+                <button class="btn-acao btn-enviar" onclick="enviarDados('enviar')" style="background: #f59e0b;">➡️ 2. ENVIAR P/ VITRINE (Ida)</button>
+                <button class="btn-acao btn-cancelar" onclick="fecharModal()" style="padding: 15px;">❌ CANCELAR</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="loading">ENVIANDO...</div>
+
+    <script>
+        const IP_SERVIDOR = window.location.hostname;
+        const BASE_URL = `http://${IP_SERVIDOR}:8050`;
+        const WS_URL = `ws://${IP_SERVIDOR}:8050/ws/producao`;
+
+        let saborAtual = "";
+        let pesoAtual = "0";
+        let modoExtra = false;
+        let navVisible = true;
+
+        function toggleNav() {
+            const wrapper = document.getElementById('nav-wrapper');
+            const btn = document.getElementById('btnToggleNav');
+            const navHeight = wrapper.querySelector('nav').offsetHeight;
+            
+            if (navVisible) {
+                wrapper.style.marginTop = `-${navHeight}px`;
+                btn.innerText = "▼ MOSTRAR MENU";
+                navVisible = false;
+            } else {
+                wrapper.style.marginTop = "0px";
+                btn.innerText = "▲ ESCONDER MENU";
+                navVisible = true;
+            }
+        }
+
+        async function carregarInterface() {
+            try {
+                const resp = await fetch(`${BASE_URL}/sabores`);
+                const dados = await resp.json();
+                const grid = document.getElementById('gridSabores');
+                grid.innerHTML = "";
+                dados.fixos.forEach(sabor => criarBotao(sabor, 'fixo'));
+                dados.rotativos.forEach(sabor => criarBotao(sabor, 'rotativo', " ⭐"));
+                
+                // NOVO: Chama a verificação de alertas logo após desenhar os botões
+                await carregarAlertasAtivosProducao();
+                
+            } catch (e) {
+                document.getElementById('tituloApp').innerText = "ERRO DE CONEXÃO";
+            }
+        }
+
+        // NOVA FUNÇÃO: Busca os alertas que ficaram pendentes no servidor
+        async function carregarAlertasAtivosProducao() {
+            try {
+                const resp = await fetch(`${BASE_URL}/alertas_ativos`);
+                const ativos = await resp.json();
+                const botoes = document.querySelectorAll('.btn-sabor');
+                
+                botoes.forEach(btn => {
+                    let nomeLimpo = btn.innerText.replace("⭐", "").trim().toUpperCase();
+                    if (ativos.includes(nomeLimpo)) {
+                        btn.classList.add('alerta-ativo');
+                    }
+                });
+            } catch (e) { 
+                console.error("Erro ao carregar alertas ativos", e); 
+            }
+        }
+
+        function criarBotao(sabor, tipo, icone = "") {
+            const grid = document.getElementById('gridSabores');
+            let btn = document.createElement('button');
+            btn.className = `btn-sabor ${tipo}`;
+            btn.innerText = sabor + icone;
+            btn.onclick = () => abrirModal(sabor); 
+            grid.appendChild(btn);
+        }
+
+        async function carregarSugestoesReceitas() {
+            try {
+                const resp = await fetch(`${BASE_URL}/receitas`);
+                const receitas = await resp.json();
+                const datalist = document.getElementById('listaReceitasExtra');
+                datalist.innerHTML = "";
+                receitas.forEach(r => {
+                    let opt = document.createElement('option');
+                    opt.value = r.nome;
+                    datalist.appendChild(opt);
+                });
+            } catch (e) { console.error("Erro ao carregar receitas"); }
+        }
+
+        async function abrirModal(sabor) {
+            modoExtra = false;
+            saborAtual = sabor; 
+            pesoAtual = "0";
+            document.getElementById('inputNomeExtra').style.display = 'none';
+            document.getElementById('saborSelecionado').style.display = 'block';
+            document.getElementById('saborSelecionado').innerText = sabor;
+            
+            // Lógica do Histórico da Vitrine
+            document.getElementById('infoVitrine').style.display = 'block';
+            document.getElementById('infoVitrine').innerText = "A procurar histórico da vitrine... ⏳";
+            document.getElementById('infoVitrine').style.color = "#94a3b8";
+            
+            atualizarDisplay();
+            document.getElementById('modal').style.display = 'flex';
+
+            try {
+                const resp = await fetch(`${BASE_URL}/status_vitrine/${sabor}`);
+                const data = await resp.json();
+                
+                if(data.peso_retornado > 0) {
+                    document.getElementById('infoVitrine').innerText = `⚠️ CUBA INCOMPLETA! Retornou ontem com ${data.peso_retornado}kg. Pese a cuba TOTAL agora antes de enviar!`;
+                    document.getElementById('infoVitrine').style.color = "#fcd34d"; // Amarelo alerta
+                } else if(data.peso_enviado > 0) {
+                    document.getElementById('infoVitrine').innerText = `Na Vitrine: Já existem ${data.peso_enviado}kg enviados anteriormente.`;
+                } else {
+                    document.getElementById('infoVitrine').innerText = "A vitrine não possui saldo pendente para este sabor.";
+                }
+            } catch(e) {
+                document.getElementById('infoVitrine').style.display = 'none';
+            }
+        }
+
+        async function enviarDados(tipoAcao) {
+            if (modoExtra) {
+                saborAtual = document.getElementById('inputNomeExtra').value.trim().toUpperCase();
+                if (saborAtual === "") return alert("Digite o nome do sabor!");
+            }
+
+            if (pesoAtual === "0" || pesoAtual === "0.") return alert("Digite o peso na balança!");
+            
+            fecharModal();
+            document.getElementById('loading').style.display = 'flex';
+
+            let url = "";
+            let payload = {};
+
+            if (tipoAcao === 'producao') {
+                url = `${BASE_URL}/producao`;
+                payload = { sabor: saborAtual, quantidade: parseFloat(pesoAtual) };
+            } else if (tipoAcao === 'enviar') {
+                url = `${BASE_URL}/enviar_vitrine`;
+                payload = { sabor: saborAtual, peso: parseFloat(pesoAtual) };
+            }
+
+            try {
+                await fetch(url, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                document.getElementById('loading').style.display = 'none';
+
+                // Só apaga o alerta vermelho se for nova produção
+                if (!modoExtra && tipoAcao === 'producao') {
+                    const botoes = document.querySelectorAll('.btn-sabor');
+                    botoes.forEach(btn => {
+                        let nomeLimpo = btn.innerText.replace("⭐", "").trim().toUpperCase();
+                        if (nomeLimpo === saborAtual.toUpperCase().trim()) btn.classList.remove('alerta-ativo');
+                    });
+                }
+
+                const titulo = document.getElementById('tituloApp');
+                titulo.innerText = "✅ SALVO: " + saborAtual;
+                titulo.style.color = "#10b981";
+                setTimeout(() => { titulo.innerText = "COZINHA & PRODUÇÃO"; titulo.style.color = "#94a3b8"; }, 3000);
+
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                alert("Erro ao enviar. Verifique a ligação à rede Wi-Fi.");
+            }
+        }
+
+        function abrirModalExtra() {
+            modoExtra = true;
+            saborAtual = ""; 
+            pesoAtual = "0";
+            document.getElementById('saborSelecionado').style.display = 'none';
+            document.getElementById('inputNomeExtra').style.display = 'block';
+            document.getElementById('inputNomeExtra').value = ""; 
+            atualizarDisplay();
+            document.getElementById('modal').style.display = 'flex';
+            setTimeout(() => document.getElementById('inputNomeExtra').focus(), 100);
+        }
+
+        function fecharModal() { 
+            document.getElementById('modal').style.display = 'none'; 
+            document.getElementById('inputNomeExtra').blur();
+        }
+
+        function digitar(tecla) {
+            if (tecla === 'C') pesoAtual = "0";
+            else if (tecla === '.') { if (!pesoAtual.includes('.')) pesoAtual += '.'; } 
+            else { if (pesoAtual === "0") pesoAtual = tecla; else pesoAtual += tecla; }
+            atualizarDisplay();
+        }
+        
+        function atualizarDisplay() { 
+            document.getElementById('displayPeso').innerText = pesoAtual.replace('.', ',') + "kg"; 
+        }
+
+        function conectarWebSocket() {
+            let socket = new WebSocket(WS_URL);
+            socket.onmessage = function(event) {
+                const dados = JSON.parse(event.data);
+                if (dados.acao === "piscar") {
+                    const botoes = document.querySelectorAll('.btn-sabor');
+                    botoes.forEach(btn => {
+                        let nomeLimpo = btn.innerText.replace("⭐", "").trim().toUpperCase();
+                        if (nomeLimpo === dados.sabor.toUpperCase().trim()) {
+                            btn.classList.add('alerta-ativo');
+                        }
+                    });
+                } else if (dados.acao === "atualizar_cardapio") {
+                    carregarInterface(); 
+                } else if (dados.acao === "produzido") {
+                    const botoes = document.querySelectorAll('.btn-sabor');
+                    botoes.forEach(btn => {
+                        let nomeLimpo = btn.innerText.replace("⭐", "").trim().toUpperCase();
+                        if (nomeLimpo === dados.sabor.toUpperCase().trim()) {
+                            btn.classList.remove('alerta-ativo');
+                        }
+                    });
+                }
+            };
+            socket.onclose = () => setTimeout(conectarWebSocket, 3000);
+        }
+
+        function toggleThemeProd() {
+            let curr = localStorage.getItem('theme-producao') || 'dark';
+            let next = curr === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('theme-producao', next);
+            if (next === 'light') {
+                document.body.setAttribute('data-theme', 'light');
+            } else {
+                document.body.removeAttribute('data-theme');
+            }
+        }
+        (function(){
+            if (localStorage.getItem('theme-producao') === 'light') {
+                document.body.setAttribute('data-theme', 'light');
+            }
+        })();
+
+        window.onload = () => { 
+            carregarInterface(); 
+            carregarSugestoesReceitas(); 
+            conectarWebSocket(); 
+            // Fecha a nav automaticamente apos 2 segundos pra liberar espaco
+            setTimeout(() => { if(navVisible) toggleNav(); }, 2000);
+        };
+    </script>
+    <footer style="text-align:center;padding:20px;border-top:1px solid rgba(245,158,11,0.1);font-size:11px;color:#78716c;position:relative;z-index:1;margin-top:20px;">
+        Motor Gelato ERP &nbsp;&mdash;&nbsp;
+        <a href="https://github.com/saldanha55" target="_blank" style="color:#f59e0b;text-decoration:none;font-weight:700;">github.com/saldanha55</a>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Motor Gelato — Auditoria de Burn Rate e prova real do historico de consumo.">
+    <title>Motor Gelato — Auditoria de Burn Rate</title>
+    <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #0d0b08; --bg-card: #1c1714; --primary: #f59e0b;
+            --text: #fafaf9; --muted: #78716c; --border: rgba(245,158,11,0.12);
+            --success: #22c55e; --danger: #ef4444;
+        }
+        .light { --bg: #fdfaf5; --bg-card: #ffffff; --text: #1c1917; --muted: #78716c; --border: rgba(28,23,15,0.1); }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; transition: background 0.3s, color 0.3s; }
+        nav {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 24px; height: 52px; background: var(--bg-card);
+            border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 50;
+        }
+        .nav-brand { font-family: 'Syne', sans-serif; font-weight: 900; color: var(--primary); font-size: 14px; letter-spacing: 1px; text-decoration: none; }
+        .nav-links { display: flex; gap: 8px; align-items: center; }
+        .nav-link { font-size: 12px; font-weight: 600; color: var(--muted); text-decoration: none; padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border); transition: all 0.2s; }
+        .nav-link:hover { color: var(--primary); border-color: rgba(245,158,11,0.3); }
+        .btn-tema { background: none; border: 1px solid var(--border); color: var(--muted); padding: 5px 10px; border-radius: 6px; cursor: pointer; font-size: 13px; font-family: inherit; transition: all 0.2s; }
+        .btn-tema:hover { color: var(--primary); border-color: rgba(245,158,11,0.3); }
+        main { padding: 32px 20px; max-width: 860px; margin: 0 auto; }
+        .card { background: var(--bg-card); padding: 30px; border-radius: 14px; border: 1px solid var(--border); }
+        h2 { font-family: 'Syne', sans-serif; font-size: 20px; font-weight: 800; margin-bottom: 8px; color: var(--text); }
+        p { color: var(--muted); font-size: 14px; line-height: 1.6; margin-bottom: 20px; }
+        button#btnAuditar { background: var(--primary); color: #0d0b08; border: none; padding: 14px 20px; border-radius: 8px; cursor: pointer; font-size: 15px; font-weight: 800; width: 100%; font-family: 'Syne', sans-serif; transition: all 0.2s; }
+        button#btnAuditar:hover { filter: brightness(1.1); }
+        table { width: 100%; border-collapse: collapse; margin-top: 25px; }
+        th, td { padding: 11px 14px; border-bottom: 1px solid var(--border); text-align: left; font-size: 13px; }
+        th { color: var(--muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .mudou { color: var(--success); font-weight: bold; }
+        .antes { color: var(--muted); text-decoration: line-through; }
+        footer { text-align: center; padding: 24px; font-size: 11px; color: var(--muted); border-top: 1px solid var(--border); margin-top: 40px; }
+        footer a { color: var(--primary); text-decoration: none; font-weight: 700; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="nav-brand">MOTOR GELATO</a>
+        <div class="nav-links">
+            <a href="/" class="nav-link">&larr; Voltar ao Hub</a>
+            <button class="btn-tema" onclick="toggleThemeVerif()">&#127771;</button>
+        </div>
+    </nav>
+    <main>
+        <div class="card">
+            <h2>&#128269; Prova Real: Hist&oacute;rico de Consumo</h2>
+            <p>Este painel tira uma "foto" dos burn rates atuais, aciona o rec&aacute;lculo na API, e compara o que mudou provando que os invent&aacute;rios dos &uacute;ltimos dias foram gravados no banco.</p>
+            
+            <button onclick="auditarBurnRates()" id="btnAuditar">Rodar Intelig&ecirc;ncia e Comparar</button>
+            
+            <div id="resultado" style="margin-top: 20px;"></div>
+        </div>
+    </main>
+
+    <script>
+        // Aponta para a porta do seu executável local
+        const BASE_URL = 'http://localhost:8050';
+
+        async function auditarBurnRates() {
+            const btn = document.getElementById('btnAuditar');
+            const div = document.getElementById('resultado');
+            btn.innerText = "⏳ Lendo banco de dados...";
+            btn.style.opacity = "0.7";
+            btn.disabled = true;
+            
+            try {
+                // 1. Tira a foto do "Antes"
+                const respAntigo = await fetch(`${BASE_URL}/ingredientes`);
+                const dadosAntigos = await respAntigo.json();
+                let mapaAntigo = {};
+                dadosAntigos.forEach(i => mapaAntigo[i.id] = i.burn_rate);
+
+                // 2. Aciona o Gatilho Oculto
+                btn.innerText = "🧠 Processando histórico dos últimos dias...";
+                await fetch(`${BASE_URL}/api/recalcular_burn_rates`, { method: 'POST' });
+
+                // 3. Tira a foto do "Depois"
+                const respNovo = await fetch(`${BASE_URL}/ingredientes`);
+                const dadosNovos = await respNovo.json();
+
+                // 4. Compara e monta a prova visual
+                let html = `<table><tr><th>Insumo</th><th>Burn Rate (Antes)</th><th>Burn Rate (Atualizado)</th></tr>`;
+                let teveMudanca = false;
+
+                dadosNovos.forEach(item => {
+                    let antes = mapaAntigo[item.id];
+                    let depois = item.burn_rate;
+                    
+                    if (antes !== depois) {
+                        teveMudanca = true;
+                        html += `<tr>
+                            <td><b>${item.nome}</b></td>
+                            <td class="antes">${antes} un/dia</td>
+                            <td class="mudou">🔥 ${depois} un/dia</td>
+                        </tr>`;
+                    }
+                });
+                
+                html += `</table>`;
+
+                if (teveMudanca) {
+                    div.innerHTML = `<h3 style="color:#10b981;">✅ Sucesso! O sistema processou os consumos na tabela oculta e ajustou a matemática:</h3>` + html;
+                } else {
+                    div.innerHTML = `<h3 style="color:#f59e0b;">⚠️ Nenhuma mudança detectada.</h3>
+                    <p style="color:#64748b; font-size: 14px;">Os inventários dos últimos dias podem não ter reduzido estoques, ou a divisão dos consumos pela média diária deu exatamente o mesmo valor que já estava registrado.</p>`;
+                }
+            } catch (e) {
+                div.innerHTML = `<p style="color:#ef4444; font-weight: bold;">❌ Erro de conexão. O Motor Gelato está rodando? Acesse: <a href="http://localhost:8050" style="color:#14b8a6;">http://localhost:8050</a></p>`;
+            } finally {
+                btn.innerText = "Rodar Inteligência e Comparar";
+                btn.style.opacity = "1";
+                btn.disabled = false;
+            }
+        }
+        
+        // ---- TEMA INDEPENDENTE ----
+        function toggleThemeVerif() {
+            var curr = localStorage.getItem('theme-verif') || 'dark';
+            var next = curr === 'dark' ? 'light' : 'dark';
+            localStorage.setItem('theme-verif', next);
+            if (next === 'light') document.body.classList.add('light');
+            else document.body.classList.remove('light');
+        }
+        if (localStorage.getItem('theme-verif') === 'light') {
+            document.body.classList.add('light');
+        }
+    </script>
+    
+    <footer>
+        Motor Gelato ERP &nbsp;&mdash;&nbsp;
+        <a href="https://github.com/saldanha55" target="_blank">github.com/saldanha55</a>
+    </footer>
+</body>
+</html>

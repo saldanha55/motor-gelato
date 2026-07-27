@@ -1,0 +1,16 @@
+# Ambientes Virtuais
+venv/
+env/
+.venv/
+
+# Cache do Python
+__pycache__/
+*.pyc
+
+# Banco de Dados e Segredos
+*.sqlite
+*.db
+.env
+
+# Controle de Versão
+.git/
